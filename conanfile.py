@@ -67,7 +67,7 @@ class BoostLevel11GroupConan(ConanFile):
     # Date_Time Dependencies
     # algorithm9 assert1 config0 io1 lexical_cast8 mpl5 range7 serialization11 smart_ptr4
     # static_assert1 throw_exception2 tokenizer6 type_traits3 utility5
-    
+
     # Locale Dependencies
     # assert1 config0 function5 iterator5 smart_ptr4 static_assert1 type_traits3
 
@@ -92,22 +92,32 @@ class BoostLevel11GroupConan(ConanFile):
     def requirements(self):
         if self.options.use_icu:
             self.requires("icu/59.1@bincrafters/testing")
+        elif self.settings.os == "Macos":
+            self.requires("libiconv/1.15@bincrafters/stable")
+
+    def configure(self):
+        if not self.options.use_icu and self.settings.os == "Macos":
+            self.options["libiconv"].shared = False
 
     def source(self):
         boostorg_github = "https://github.com/boostorg"
-        archive_name = "boost-" + self.version  
+        archive_name = "boost-" + self.version
         for lib_short_name in self.lib_short_names:
             tools.get("{0}/{1}/archive/{2}.tar.gz"
                 .format(boostorg_github, lib_short_name, archive_name))
             os.rename(lib_short_name + "-" + archive_name, lib_short_name)
 
     def build(self):
+        print(self.b2_options)
         self.run(self.deps_user_info['Boost.Generator'].b2_command + self.b2_options)
-    
+
     @property
     def b2_options(self):
         if self.options.use_icu:
             return " boost.locale.iconv=off boost.locale.icu=on"
+        elif self.settings.os == "Macos":
+            iconv_path = self.deps_cpp_info["libiconv"].rootpath
+            return " boost.locale.iconv=on boost.locale.icu=off -sICONV_PATH=%s" % iconv_path
         else:
             return " boost.locale.icu=off"
 
@@ -126,4 +136,4 @@ class BoostLevel11GroupConan(ConanFile):
         elif self.settings.os == "Macos":
             self.cpp_info.libs.append("iconv")
         if self.settings.os != "Windows": 
-            self.cpp_info.libs.append("pthread") 
+            self.cpp_info.libs.append("pthread")
